@@ -1,4 +1,5 @@
-
+	program covid
+	
 	integer seed1,ZBQLPOI,nit(0:100000),ntest(0:50000)
 	real zz,bra(0:1000000)
 	real*8 muaat,time,tt0,itime(100000000)
