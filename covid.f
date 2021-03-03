@@ -51,6 +51,11 @@ c** number of infected people
 	   itime(i)=-1
 	enddo
 	nevent=0
+	
+c** the input file rt2.dat is composed from three columns. The $first one
+c** the number of day (variable j). The $second column is the value of R
+c** at day j, whereas the $third column is the imported infections
+
 	do i=1,1000000
 	   read(88,*,end=99)j,bra(i),xnimm
 	   xnimm=xnimm  
