@@ -1,47 +1,53 @@
-
-	program covid
+ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+c     EVALUATION OF REPRODUCTION CASE NUMBER
+c     from
+c     assume generation time distribution is a Gamma function w(z)=(tau**(-a)/Gamma(a))*(xt**(-1)*exp(-xt*1/tau))
+c     with two input parameters tau and a
+c     read from input file with 2 columns containing day and daily number of infected
+c     write output file with 3 columns containing day, reproduction number Rc and daily number of immigrants
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+	program rc_evaluation
 
 	implicit none
 c*********************************************************
-
-	integer seed1,nsum,sigma(-1:1),ifinal
+c     VARIABLE DECLARATION
+c*******************************************************
+	integer nsum,sigma(-1:1),ifinal
 	integer i,j,k,l,m,imin,ini,ndayt,kloop
 	real Br(-100:5000),laplBr(-100:5000)
-	real muj(-100:5000),ran2,a,ap,xx,yp,y
+	real muj(-100:5000),a,ap,xx,yp,y
 	real*8  LL,LLp,LL1,LL2,LL3,dLL3,S(0:5000),mu,dmu,dBr
 	real*8 f(0:5000),g,dtau,xt,gnorm,taup
 	real n(-100:5000),alfa(0:5000)
 	character finput*40,foutput*40
-
 c*********************************************************
 
-
-C****************************************************************
-C******************** MAIN CODE *********************************
-C****************************************************************
-
-
-c*****  INPUT PARAMETERS **********
-	
+cccccccccccccccccccccccccccccccccccc
+c*****   READ INPUT PARAMETERS **********
+        
 	print*,'Please, enter the name of the input file'
-	read(*,'(a)')finput
+        print*,'File input format: day, number of infected'
+	read(*,'(a)')finput 
 	print*,'Please, enter the name of the output file'
 	read(*,'(a)')foutput
 	print*,'Please, enter the Gamma distribution parameter tau'
+        print*,'Suggested value tau \in (0.05,0.5)'
 	read(*,*)taup 
 	print*,'Please, enter the Gamma distribution parameter a'
+        print*,'Suggested value a \simeq 6/taup'
 	read(*,*)ap
-		
+ccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+        
 c*****  READING INPUT FILE *******
 	
 	open(55,file=finput)
 	do i=1,10000
-	   read(55,*,end=99)xx,n(i) !days and n(i)
+	   read(55,*,end=99)xx,n(i) !days and n(i)=daily number of infected
 	   nsum=nsum+n(i)
 	enddo
- 99	ndayt=i-1 !number of total days
-	ini=2	!Initial day for LL evaluation
-		
+ 99	ndayt=i-1 !total number of days
+	ini=2     !Initial day for LL evaluation
+ccccccccccccccccccccccccccccccccccccccccccccccccccccccc        
 c*****  Initial setting	**********
 
 	sigma(-1)=1
@@ -50,10 +56,10 @@ c*****  Initial setting	**********
  
 	do i=imin,ndayt+1
 	   laplBr(i)=0  !
-	   alfa(i)=(1/3.5)*sqrt(nsum*1./5E5) !alfa=1/V in Eq.3
+	   alfa(i)=0.3*sqrt(nsum*1.)  !alfa=1/V in Eq.3 form ref. Lippiello et. al
 	enddo
-
-c***** Integral of Gamma distribution *******	
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+c       NUMERICAL INTEGRAL OF GAMMA DISTRIBUTION  cc
 	
 	i=1
 	g=0d0
@@ -77,11 +83,13 @@ c***** Integral of Gamma distribution *******
 	   endif
 	enddo
 	
-c*****  Initial evaluation for the first 5 days of Br(i) ****
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+c*****  Initial evaluation for the first 5 days of the case reproduction number Rc ****
 c*****  by means of the Walling-Teunis algorithm ****
+c*****  Rc is indicated by Br(i) at day i ****	
 	
 	do i=2,5
-	   Br(i)=0  !Br is R_s(i)
+	   Br(i)=0  
 	   do j=0,ndayt-i
 	      s(i)=0d0
 	      do k=0,i+j
@@ -92,20 +100,21 @@ c*****  by means of the Walling-Teunis algorithm ****
 	enddo
 	Br(1)=Br(2)
 	mu=0
-	
-c******* Initial setting of Br(i) for the subsequent days ****
-c******* Initial setting of immigrants rate muj(i) *****
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc	
+c******* Initial setting of Br(i) for the subsequent days>5 ****
+c******* Initial setting of immigrants rate muj *****
 	
 	do i=5,ndayt+1
 	   Br(i)=Br(2)-0.05*(i-2)
 	   Br(i)=max(Br(i),0.01)
 	   muj(i)=0
 	enddo
+	
 	do i=ini,ndayt
 	   laplBr(i)=(Br(i-1)+Br(i+1)-2*Br(i))
 	   mu=mu+muj(i)      
 	enddo
-	
+ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc	
 c****   Initial estimate of LL *******
 	
 	LL2=0d0
@@ -132,8 +141,8 @@ c********************************************
 	
 	do kloop=1,300	!loop on Monte Carlo steps
 	   do l=ini,ndayt*20
-	      j=int(ran2(seed1)*(ndayt-2))+2   !chose a random day
- 41		 dBr=max(Br(j),0.2)*0.02*(ran2(seed1)-.5) !trial dBr 
+	      j=int(rand()*(ndayt-2))+2   !chose a random day
+ 41		 dBr=max(Br(j),0.2)*0.02*(rand()-.5) !trial dBr 
 		 if(Br(j)+dBr.le.0.or.Br(j)+dBr.gt.9)goto 41 !lower and upper bounds for Br(i)
 !                If j is an internal day
 		 if(j.ne.ndayt-1)then   
@@ -194,8 +203,8 @@ c************************************************************
 	      enddo   !loop over 20 MCs
 c****** Loop on trials for muj(i) ******* 
 	      do l=ini,ndayt
-		 j=int(ran2(seed1)*(ndayt-ini))+ini
- 57		 dmu=.2*sign(1.,ran2(seed1)-.5) !trial dmu
+		 j=int(rand()*(ndayt-ini))+ini
+ 57		 dmu=.2*sign(1.,rand()-.5) !trial dmu
 		 if(muj(j)+dmu.le.0)goto 57
 		 LLp=LL+n(j)*(dlog(S(j)+muj(j)+dmu)-dlog(S(j)+muj(j)))-dmu
 		 if(LLp.ge.LL)then   !acceptance of the trial
@@ -208,7 +217,8 @@ c**********************************************************
 	   enddo  !end loop over all Monte Carlo steps
 
 c*********************************************************
-c*********************WRITING ****************************
+c*********************WRITING ***************************
+c       output file: first column=day, second column=Rc, third column=\mu
 	   
 	   open(200,file=foutput)	!output file
 	   write(200,*)'# tau=',taup,'a=',ap,'logL=',LL
@@ -222,46 +232,7 @@ c*********************WRITING ****************************
 	STOP
 	end
 
-	
-C****************************************************************
-C******************** SUBROUTINES AND FUNCTIONS *****************
-C****************************************************************
-
-	
-	FUNCTION ran2(idum)
-      INTEGER idum,IM1,IM2,IMM1,IA1,IA2,IQ1,IQ2,IR1,IR2,NTAB,NDIV
-      REAL ran2,AM,EPS,RNMX
-      PARAMETER (IM1=2147483563,IM2=2147483399,AM=1./IM1,IMM1=IM1-1,
-     *IA1=40014,IA2=40692,IQ1=53668,IQ2=52774,IR1=12211,IR2=3791,
-     *NTAB=32,NDIV=1+IMM1/NTAB,EPS=1.2e-7,RNMX=1.-EPS)
-      INTEGER idum2,j,k,iv(NTAB),iy
-      SAVE iv,iy,idum2
-      DATA idum2/123456789/, iv/NTAB*0/, iy/0/
-      if (idum.le.0) then
-        idum=max(-idum,1)
-        idum2=idum
-        do 11 j=NTAB+8,1,-1
-          k=idum/IQ1
-          idum=IA1*(idum-k*IQ1)-k*IR1
-          if (idum.lt.0) idum=idum+IM1
-          if (j.le.NTAB) iv(j)=idum
-11      continue
-        iy=iv(1)
-      endif
-      k=idum/IQ1
-      idum=IA1*(idum-k*IQ1)-k*IR1
-      if (idum.lt.0) idum=idum+IM1
-      k=idum2/IQ2
-      idum2=IA2*(idum2-k*IQ2)-k*IR2
-      if (idum2.lt.0) idum2=idum2+IM2
-      j=1+iy/NDIV
-      iy=iv(j)-idum2
-      iv(j)=idum
-      if(iy.lt.1)iy=iy+IMM1
-      ran2=min(AM*iy,RNMX)
-      return
-      END
-
-
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 
 
